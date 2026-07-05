@@ -1,0 +1,310 @@
+<pre id="rat"></pre>
+
+<script>
+  import { vertices as localVerts, faces } from "../lib/rat.json";
+  import squeakUrl from "../assets/squeak.mp3";
+
+  const CHARS =
+    " .'`^\",:;Il!i><~+_-?][}{1)(\\/tfjrxnuvczXYUJCLQ0OZmwqpdbkhao*#MW&8%B@$";
+
+  function buildCircleMasks(resX: number, resY: number) {
+    const masks: [number, number][][] = [];
+    for (const cyP of [1 / 3, 1, 5 / 3]) {
+      for (const cxP of [0.25, 0.75]) {
+        const offsets: [number, number][] = [];
+        const rx = Math.ceil(0.3 * resX) + 1;
+        const ry = Math.ceil((0.3 / 2) * resY) + 1;
+        const baseDx = Math.round(cxP * resX);
+        const baseDy = Math.round((cyP / 2) * resY);
+        for (let dy = baseDy - ry; dy <= baseDy + ry; dy++) {
+          for (let dx = baseDx - rx; dx <= baseDx + rx; dx++) {
+            const ddx = (dx + 0.5) / resX - cxP;
+            const ddy = ((dy + 0.5) * 2) / resY - cyP;
+            if (ddx * ddx + ddy * ddy <= 0.09) offsets.push([dx, dy]);
+          }
+        }
+        masks.push(offsets);
+      }
+    }
+    return masks;
+  }
+
+  const charVectors = (() => {
+    const canvas = document.createElement("canvas");
+    canvas.width = 32;
+    canvas.height = 64;
+    const ctx = canvas.getContext("2d", { willReadFrequently: true })!;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.font = `64px monospace`;
+
+    const glyphMasks = buildCircleMasks(32, 64);
+    return CHARS.split("").map((ch) => {
+      ctx.fillStyle = "#000";
+      ctx.fillRect(0, 0, 32, 64);
+      ctx.fillStyle = "#fff";
+      ctx.fillText(ch, 16, 33);
+      const { data } = ctx.getImageData(0, 0, 32, 64);
+
+      return new Float32Array(6).map((_, m) => {
+        const offsets = glyphMasks[m].filter(
+          ([dx, dy]) => dx >= 0 && dx < 32 && dy >= 0 && dy < 64,
+        );
+        return (
+          offsets.reduce(
+            (a, [dx, dy]) => a + data[(dy * 32 + dx) * 4] / 255,
+            0,
+          ) / offsets.length || 0
+        );
+      });
+    });
+  })();
+
+  const matchCache = new Map<number, number>();
+
+  const cellMasks = buildCircleMasks(6, 12);
+
+  const faceNormalX = new Float64Array(faces.length / 3);
+  const faceNormalY = new Float64Array(faces.length / 3);
+  const faceNormalZ = new Float64Array(faces.length / 3);
+  for (let f = 0; f < faces.length / 3; f++) {
+    const a = faces[f * 3],
+      b = faces[f * 3 + 1],
+      c = faces[f * 3 + 2];
+    const ax = localVerts[a * 3],
+      ay = localVerts[a * 3 + 1],
+      az = localVerts[a * 3 + 2];
+    const bx = localVerts[b * 3],
+      by = localVerts[b * 3 + 1],
+      bz = localVerts[b * 3 + 2];
+    const cx = localVerts[c * 3],
+      cy = localVerts[c * 3 + 1],
+      cz = localVerts[c * 3 + 2];
+    faceNormalX[f] = (by - ay) * (cz - az) - (bz - az) * (cy - ay);
+    faceNormalY[f] = (bz - az) * (cx - ax) - (bx - ax) * (cz - az);
+    faceNormalZ[f] = (bx - ax) * (cy - ay) - (by - ay) * (cx - ax);
+  }
+
+  let scale = 1;
+  let scaleVelocity = 0;
+  let angle = 0;
+
+  const squeakAudio = new Audio(squeakUrl);
+
+  document.getElementById("rat")!.addEventListener("click", () => {
+    squeakAudio.currentTime = 0;
+    squeakAudio.play().catch(() => {});
+    scaleVelocity -= 6;
+  });
+
+  function render() {
+    const subScale = scale * 0.7256773581549772;
+    const cosYaw = Math.cos(angle);
+    const sinYaw = Math.sin(angle);
+
+    const litBuf = new Float32Array(720 * 576);
+    const depthBuf = new Float64Array(720 * 576).fill(-Infinity);
+    const viewZ = new Float64Array(localVerts.length / 3);
+    const screenX = new Float64Array(localVerts.length / 3);
+    const screenY = new Float64Array(localVerts.length / 3);
+
+    for (let j = 0; j < localVerts.length / 3; j++) {
+      const x = localVerts[j * 3];
+      const y = localVerts[j * 3 + 1];
+      const z = localVerts[j * 3 + 2];
+      const rx = x * cosYaw + z * sinYaw;
+      const rz = z * cosYaw - x * sinYaw;
+      viewZ[j] = rz;
+      screenX[j] = rx * subScale + 360;
+      screenY[j] = 288 - y * subScale;
+    }
+
+    // rasterize
+    for (let f = 0; f < faces.length / 3; f++) {
+      const a = faces[f * 3],
+        b = faces[f * 3 + 1],
+        c = faces[f * 3 + 2];
+
+      let litNormalX = faceNormalX[f] * cosYaw + faceNormalZ[f] * sinYaw;
+      let litNormalY = faceNormalY[f];
+      let litNormalZ = faceNormalZ[f] * cosYaw - faceNormalX[f] * sinYaw;
+      if (litNormalZ < 0) {
+        litNormalX = -litNormalX;
+        litNormalY = -litNormalY;
+        litNormalZ = -litNormalZ;
+      }
+
+      const ax = screenX[a],
+        ay = screenY[a];
+      const bx = screenX[b],
+        by = screenY[b];
+      const cx = screenX[c],
+        cy = screenY[c];
+
+      const area = (bx - ax) * (cy - ay) - (cx - ax) * (by - ay);
+      if (Math.abs(area) < 1e-6) continue;
+
+      const az = viewZ[a],
+        bz = viewZ[b],
+        cz = viewZ[c];
+      const edgeNx = [-(by - ay), -(cy - by), -(ay - cy)];
+      const edgeNy = [bx - ax, cx - bx, ax - cx];
+      const edgeMin = [0, 0, 0];
+      const edgeMax = [0, 0, 0];
+      for (let e = 0; e < 3; e++) {
+        const d0 = edgeNx[e] * ax + edgeNy[e] * ay;
+        const d1 = edgeNx[e] * bx + edgeNy[e] * by;
+        const d2 = edgeNx[e] * cx + edgeNy[e] * cy;
+        edgeMin[e] = Math.min(d0, d1, d2);
+        edgeMax[e] = Math.max(d0, d1, d2);
+      }
+
+      for (
+        let row = Math.max(0, Math.floor(Math.min(ay, by, cy)));
+        row <= Math.min(575, Math.ceil(Math.max(ay, by, cy)));
+        row++
+      ) {
+        for (
+          let col = Math.max(0, Math.floor(Math.min(ax, bx, cx)));
+          col <= Math.min(719, Math.ceil(Math.max(ax, bx, cx)));
+          col++
+        ) {
+          let overlaps = true;
+          for (let e = 0; e < 3; e++) {
+            if (
+              edgeMax[e] <
+                edgeNx[e] * (edgeNx[e] >= 0 ? col : col + 1) +
+                  edgeNy[e] * (edgeNy[e] >= 0 ? row : row + 1) ||
+              edgeMin[e] >
+                edgeNx[e] * (edgeNx[e] >= 0 ? col + 1 : col) +
+                  edgeNy[e] * (edgeNy[e] >= 0 ? row + 1 : row)
+            ) {
+              overlaps = false;
+              break;
+            }
+          }
+          if (!overlaps) continue;
+
+          const cpx = col + 0.5,
+            cpy = row + 0.5;
+          const w0 = ((bx - cpx) * (cy - cpy) - (cx - cpx) * (by - cpy)) / area;
+          const w1 = ((cx - cpx) * (ay - cpy) - (ax - cpx) * (cy - cpy)) / area;
+          const depth = w0 * az + w1 * bz + (1 - w0 - w1) * cz;
+          const p = row * 720 + col;
+          if (depth > depthBuf[p]) {
+            depthBuf[p] = depth;
+            litBuf[p] = Math.min(
+              1,
+              0.18 +
+                0.82 *
+                  Math.max(
+                    0,
+                    (litNormalX * -0.4 + litNormalY * 0.55 + litNormalZ * 0.8) /
+                      (Math.hypot(
+                        faceNormalX[f],
+                        faceNormalY[f],
+                        faceNormalZ[f],
+                      ) || 1),
+                  ),
+            );
+          }
+        }
+      }
+    }
+
+    // to ascii
+    let ascii = "";
+    for (let row = 0; row < 48; row++) {
+      for (let col = 0; col < 120; col++) {
+        const shapeVec = new Array(6);
+        // get shape vector
+        for (let m = 0; m < 6; m++) {
+          const offsets = cellMasks[m];
+          let sum = 0;
+          let count = 0;
+          for (const [dx, dy] of offsets) {
+            const gx = col * 6 + dx;
+            const gy = row * 12 + dy;
+            if (gx < 0 || gx >= 720 || gy < 0 || gy >= 576) continue;
+            sum += litBuf[gy * 720 + gx];
+            count++;
+          }
+          shapeVec[m] = count > 0 ? sum / count : 0;
+        }
+
+        // improve contrast
+        let max = 0;
+        for (const v of shapeVec) if (v > max) max = v;
+        if (max >= 1e-4)
+          for (let k = 0; k < shapeVec.length; k++)
+            shapeVec[k] = Math.pow(shapeVec[k] / max, 2.5) * max;
+
+        // match char
+        let key = 0;
+        for (let k = 0; k < 6; k++)
+          key =
+            (key << 4) |
+            Math.min(15, Math.max(0, Math.round(shapeVec[k] * 15)));
+        let bestIdx = matchCache.get(key >>> 0);
+        if (bestIdx == undefined) {
+          let bestDist = Infinity;
+          for (let i = 0; i < charVectors.length; i++) {
+            let d = 0;
+            for (let k = 0; k < 6; k++) {
+              const diff = shapeVec[k] - charVectors[i][k];
+              d += diff * diff;
+            }
+            if (d < bestDist) {
+              bestDist = d;
+              bestIdx = i;
+            }
+          }
+          matchCache.set(key >>> 0, bestIdx!);
+        }
+
+        ascii += CHARS[bestIdx!];
+      }
+      ascii += "\n";
+    }
+    document.getElementById("rat")!.textContent = ascii;
+  }
+
+  let last = 0;
+  let lastPhysics = 0;
+  function frame(now: number) {
+    if (Math.abs(scale - 1) > 1e-4 || Math.abs(scaleVelocity) > 1e-4) {
+      const dt = Math.min(0.05, (now - lastPhysics) / 1000);
+      lastPhysics = now;
+      scaleVelocity += (-75 * (scale - 1) - 9 * scaleVelocity) * dt;
+      scale += scaleVelocity * dt;
+    }
+
+    if (now - last > 50) {
+      angle += 0.05;
+      if (scale > 0) render();
+      last = now;
+    }
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+</script>
+
+<style>
+  #rat {
+    font-family: monospace;
+    font-size: clamp(6px, 1.6vw, 13px);
+    line-height: 1;
+    letter-spacing: 0;
+    color: #ffffff;
+    background: #05070a;
+    margin: 0;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    white-space: pre;
+    user-select: none;
+    cursor: pointer;
+  }
+</style>
