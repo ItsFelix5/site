@@ -1,0 +1,11 @@
+diff --git a/dist/index.mjs b/dist/index.mjs
+index e2a8b64b137bc0b1d602ae7c6689274b0452e352..e505f4be13cf24917f537310c8487c69836ffc13 100644
+--- a/dist/index.mjs
++++ b/dist/index.mjs
+@@ -1,4 +1,5 @@
+-import { builtinModules, createRequire, registerHooks } from "node:module";
++import { builtinModules, createRequire } from "node:module";
++const registerHooks = createRequire(import.meta.url)("node:module").registerHooks;
+ import assert from "node:assert";
+ import { CoreHeaders, CorePaths, Log, LogLevel, Miniflare, Request as Request$1, Response as Response$1, buildPublicUrl, coupleWebSocket, getDefaultDevRegistryPath, getNodeCompat, getWorkerRegistry, kUnsafeEphemeralUniqueKey, parseModuleFallbackRequest } from "miniflare";
+ import * as wrangler from "wrangler";
