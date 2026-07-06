@@ -1,8 +1,12 @@
 <pre id="rat"></pre>
+<div id="hefuckingdied">
+  <p>You killed him :(</p>
+</div>
 
 <script>
   import { vertices as localVerts, faces } from "../lib/rat.json";
   import squeakUrl from "../assets/squeak.mp3";
+  import explosionUrl from "../assets/explosion.mp3";
 
   const CHARS =
     " .'`^\",:;Il!i><~+_-?][}{1)(\\/tfjrxnuvczXYUJCLQ0OZmwqpdbkhao*#MW&8%B@$";
@@ -88,14 +92,108 @@
   let scale = 1;
   let scaleVelocity = 0;
   let angle = 0;
+  let clicks = Math.floor(Math.random() * 10) + 5;
 
   const squeakAudio = new Audio(squeakUrl);
+  const explosionAudio = new Audio(explosionUrl);
 
-  document.getElementById("rat")!.addEventListener("click", () => {
-    squeakAudio.currentTime = 0;
-    squeakAudio.play().catch(() => {});
-    scaleVelocity -= 6;
-  });
+  let explosionStart = 0;
+  let particles: {
+    angle: number;
+    speed: number;
+    vy0: number;
+    radius: number;
+    lifetime: number;
+    heat: number;
+  }[] = [];
+
+  const FIRE_STOPS: [number, number, number, number][] = [
+    [0, 10, 10, 10],
+    [0.15, 60, 20, 10],
+    [0.3, 140, 30, 0],
+    [0.45, 200, 60, 0],
+    [0.6, 255, 110, 0],
+    [0.75, 255, 170, 30],
+    [0.9, 255, 215, 110],
+    [1.15, 255, 255, 245],
+  ];
+
+  function renderExplosion(t: number) {
+    const cols = 120;
+    const rows = 48;
+    const cx = 60;
+    const cy = 24;
+    const heatGrid = new Float32Array(cols * rows);
+
+    for (const p of particles) {
+      const life = t / p.lifetime;
+      if (life >= 1) {
+        particles = particles.filter((x) => x !== p);
+        continue;
+      }
+      const px = cx + Math.cos(p.angle) * (p.speed * t * 1 - 0.35 * life);
+      const py = cy + p.vy0 * t + 0.5 * 10 * t * t;
+      const sigma = p.radius * (0.5 + life * 1.2);
+      const heatAmt = p.heat * (1 - life * life);
+
+      const reach = sigma * 2.2;
+      for (
+        let row = Math.max(0, Math.floor(py - reach));
+        row <= Math.min(rows - 1, Math.ceil(py + reach));
+        row++
+      ) {
+        const dy = (row - py) * 2;
+        for (
+          let col = Math.max(0, Math.floor(px - reach));
+          col <= Math.min(cols - 1, Math.ceil(px + reach));
+          col++
+        ) {
+          const dx = col - px;
+          const v =
+            heatAmt * Math.exp(-(dx * dx + dy * dy) / (2 * sigma * sigma));
+          if (v > heatGrid[row * cols + col]) heatGrid[row * cols + col] = v;
+        }
+      }
+    }
+
+    const flash = Math.max(0, 1 - t / 0.2) * 1.2;
+    let html = "";
+    for (let row = 0; row < rows; row++) {
+      let rowHtml = "";
+      let curColor = "";
+      let buf = "";
+      for (let col = 0; col < cols; col++) {
+        const fdx = col - cx;
+        const fdy = (row - cy) * 2;
+        let h =
+          heatGrid[row * cols + col] +
+          flash * Math.exp(-(fdx * fdx + fdy * fdy) / 450);
+        h += (Math.random() - 0.5) * 0.06 * Math.min(1, h + 0.2);
+        const clamped = Math.max(0, Math.min(1.15, h));
+
+        let lo = FIRE_STOPS[0];
+        let hi = FIRE_STOPS[FIRE_STOPS.length - 1];
+        for (let i = 0; i < FIRE_STOPS.length - 1; i++) {
+          if (clamped >= FIRE_STOPS[i][0] && clamped <= FIRE_STOPS[i + 1][0]) {
+            lo = FIRE_STOPS[i];
+            hi = FIRE_STOPS[i + 1];
+            break;
+          }
+        }
+        const f = (clamped - lo[0]) / (hi[0] - lo[0] || 1);
+        const color = `rgb(${Math.round(lo[1] + (hi[1] - lo[1]) * f)},${Math.round(lo[2] + (hi[2] - lo[2]) * f)},${Math.round(lo[3] + (hi[3] - lo[3]) * f)})`;
+        if (color !== curColor) {
+          if (buf) rowHtml += `<span style="color:${curColor}">${buf}</span>`;
+          curColor = color;
+          buf = "";
+        }
+        buf += " .:-=+*#%@"[Math.round((clamped / 1.15) * 9)];
+      }
+      if (buf) rowHtml += `<span style="color:${curColor}">${buf}</span>`;
+      html += rowHtml + "\n";
+    }
+    document.getElementById("rat")!.innerHTML = `<span>${html}</span>`;
+  }
 
   function render() {
     const subScale = scale * 0.7256773581549772;
@@ -119,7 +217,6 @@
       screenY[j] = 288 - y * subScale;
     }
 
-    // rasterize
     for (let f = 0; f < faces.length / 3; f++) {
       const a = faces[f * 3],
         b = faces[f * 3 + 1],
@@ -212,12 +309,10 @@
       }
     }
 
-    // to ascii
     let ascii = "";
     for (let row = 0; row < 48; row++) {
       for (let col = 0; col < 120; col++) {
         const shapeVec = new Array(6);
-        // get shape vector
         for (let m = 0; m < 6; m++) {
           const offsets = cellMasks[m];
           let sum = 0;
@@ -232,14 +327,12 @@
           shapeVec[m] = count > 0 ? sum / count : 0;
         }
 
-        // improve contrast
         let max = 0;
         for (const v of shapeVec) if (v > max) max = v;
         if (max >= 1e-4)
           for (let k = 0; k < shapeVec.length; k++)
             shapeVec[k] = Math.pow(shapeVec[k] / max, 2.5) * max;
 
-        // match char
         let key = 0;
         for (let k = 0; k < 6; k++)
           key =
@@ -272,6 +365,15 @@
   let last = 0;
   let lastPhysics = 0;
   function frame(now: number) {
+    if (explosionStart) {
+      if (particles.length) {
+        const t = (now - explosionStart) / 1500;
+        renderExplosion(t);
+        requestAnimationFrame(frame);
+      } else document.getElementById("hefuckingdied")!.style.opacity = "1";
+      return;
+    }
+
     if (Math.abs(scale - 1) > 1e-4 || Math.abs(scaleVelocity) > 1e-4) {
       const dt = Math.min(0.05, (now - lastPhysics) / 1000);
       lastPhysics = now;
@@ -287,6 +389,33 @@
     requestAnimationFrame(frame);
   }
   requestAnimationFrame(frame);
+
+  document.getElementById("rat")!.addEventListener("click", () => {
+    if (explosionStart) return;
+
+    const now = performance.now();
+    squeakAudio.currentTime = 0;
+    squeakAudio.play().catch(() => {});
+    scaleVelocity -= 6;
+
+    if (--clicks <= 0) {
+      explosionStart = now;
+      particles = Array.from({ length: 100 }, () => {
+        const angle = Math.random() * Math.PI * 2;
+        const speed = 5 + Math.random() * 23;
+        return {
+          angle,
+          speed,
+          vy0: Math.sin(angle) * speed * 0.5 - Math.random() * 4,
+          radius: 2 + Math.random() * 2.5,
+          lifetime: 1.1 + Math.random() * 1.1,
+          heat: 0.85 + Math.random() * 0.3,
+        };
+      });
+      explosionAudio.currentTime = 0;
+      explosionAudio.play().catch(() => {});
+    }
+  });
 </script>
 
 <style>
@@ -305,6 +434,20 @@
     align-items: center;
     white-space: pre;
     user-select: none;
-    cursor: pointer;
+  }
+
+  #hefuckingdied {
+    font-family: sans-serif;
+    position: fixed;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    color: #ffffff;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 8s ease-in;
   }
 </style>
