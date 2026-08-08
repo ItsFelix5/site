@@ -1,0 +1,102 @@
+---
+import { type ToolSlug, tools } from "../lib/tools";
+import "../styles/tools.css";
+import Layout from "./Layout.astro";
+
+interface Props {
+  active?: ToolSlug;
+}
+
+const { active } = Astro.props;
+const activeTool = tools.find((tool) => tool.slug === active);
+---
+
+<Layout title={activeTool ? `${activeTool.name} - Tools` : "Tools"}>
+  <nav class="sidebar">
+    <span class="brand">Tools</span>
+    {
+      tools.map((tool) => (
+        <a
+          href={`/tools/${tool.slug}`}
+          class={active === tool.slug ? "active" : ""}
+        >
+          {tool.name}
+        </a>
+      ))
+    }
+  </nav>
+  <main class:list={["content", { wide: active === "diff" }]}>
+    <h1>{activeTool?.name ?? "Tools"}</h1>
+    <slot />
+  </main>
+
+  <style>
+    .sidebar {
+      flex: 0 0 220px;
+      border-right: 1px solid var(--border);
+      padding: 1.5rem 1rem;
+    }
+
+    .brand {
+      display: block;
+      color: var(--text);
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 1.1rem;
+      margin-bottom: 1.25rem;
+      letter-spacing: 0.02em;
+    }
+
+    .sidebar a {
+      display: block;
+      padding: 0.4rem 0.6rem;
+      border-radius: 6px;
+      color: var(--muted);
+      text-decoration: none;
+      font-size: 0.9rem;
+    }
+
+    .sidebar a:hover {
+      background: var(--surface);
+      color: var(--text);
+    }
+
+    .sidebar a:focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: -2px;
+    }
+
+    .sidebar a.active {
+      background: var(--surface-2);
+      color: var(--accent);
+    }
+
+    .content {
+      flex: 1;
+      padding: 2rem 2.5rem;
+      max-width: 860px;
+    }
+
+    .content.wide {
+      box-sizing: border-box;
+      width: 100%;
+      max-width: 1240px;
+    }
+
+    @media (max-width: 640px) {
+      .shell {
+        flex-direction: column;
+      }
+
+      .sidebar {
+        flex: none;
+        border-right: none;
+        border-bottom: 1px solid var(--border);
+      }
+
+      .content {
+        padding: 1.5rem;
+      }
+    }
+  </style>
+</Layout>

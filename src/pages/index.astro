@@ -1,8 +1,23 @@
 ---
-import Layout from "../layouts/Layout.astro";
 import SpinningRat from "../components/SpinningRat.astro";
+import Layout from "../layouts/Layout.astro";
 ---
 
 <Layout>
+  <nav><a href="/tools">tools</a></nav>
   <SpinningRat />
 </Layout>
+
+<style>
+  nav {
+    position: fixed;
+    top: 0;
+    right: 0;
+    padding: 1rem;
+  }
+
+  a {
+    color: hsl(215, 33%, 10%);
+    text-decoration: none;
+  }
+</style>

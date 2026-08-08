@@ -1,0 +1,26 @@
+---
+import type { ToolSlug } from "../../lib/tools";
+import Base64 from "./Base64.svelte";
+import Diff from "./Diff.svelte";
+import DnsLookup from "./DnsLookup.svelte";
+import Ocr from "./Ocr.svelte";
+import PasswordGenerator from "./PasswordGenerator.svelte";
+import Randomizer from "./Randomizer.svelte";
+import Recorder from "./Recorder.svelte";
+import Unicode from "./Unicode.svelte";
+
+interface Props {
+	slug: ToolSlug;
+}
+
+const { slug } = Astro.props;
+---
+
+{slug === "base64" && <Base64 client:load />}
+{slug === "diff" && <Diff client:load />}
+{slug === "recorder" && <Recorder client:load />}
+{slug === "randomizer" && <Randomizer client:load />}
+{slug === "password-generator" && <PasswordGenerator client:load />}
+{slug === "ocr" && <Ocr client:load />}
+{slug === "dns-lookup" && <DnsLookup client:load />}
+{slug === "unicode" && <Unicode client:load />}

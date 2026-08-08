@@ -1,0 +1,22 @@
+---
+import Tool from "../../components/tools/Tool.astro";
+import ToolsLayout from "../../layouts/ToolsLayout.astro";
+import { type ToolSlug, tools } from "../../lib/tools";
+
+interface Props {
+	slug: ToolSlug;
+}
+
+const { slug } = Astro.props;
+
+export function getStaticPaths() {
+	return tools.map(({ slug }) => ({
+		params: { slug },
+		props: { slug },
+	}));
+}
+---
+
+<ToolsLayout active={slug}>
+  <Tool slug={slug} />
+</ToolsLayout>
