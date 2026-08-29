@@ -8,14 +8,23 @@ export const styles: TransformStyle[] = [
 	{ id: "italic", name: "Italic" },
 	{ id: "bold-italic", name: "Bold Italic" },
 	{ id: "script", name: "Script" },
+	{ id: "bold-script", name: "Bold Script" },
 	{ id: "fraktur", name: "Fraktur" },
+	{ id: "bold-fraktur", name: "Bold Fraktur" },
 	{ id: "double-struck", name: "Double-Struck" },
 	{ id: "monospace", name: "Monospace" },
 	{ id: "sans-serif", name: "Sans-Serif" },
+	{ id: "sans-serif-bold", name: "Sans-Serif Bold" },
+	{ id: "sans-serif-italic", name: "Sans-Serif Italic" },
+	{ id: "sans-serif-bold-italic", name: "Sans-Serif Bold Italic" },
 	{ id: "small-caps", name: "Small Caps" },
 	{ id: "fullwidth", name: "Fullwidth" },
 	{ id: "circled", name: "Circled" },
+	{ id: "negative-circled", name: "Negative Circled" },
 	{ id: "squared", name: "Squared" },
+	{ id: "negative-squared", name: "Negative Squared" },
+	{ id: "parenthesized", name: "Parenthesized" },
+	{ id: "regional-indicators", name: "Regional Indicators" },
 	{ id: "superscript", name: "Superscript" },
 	{ id: "subscript", name: "Subscript" },
 	{ id: "strikethrough", name: "Strikethrough" },
@@ -334,11 +343,49 @@ function withCombining(text: string, mark: number): string {
 	return Array.from(text, (ch) => (ch === "\n" ? ch : ch + combining)).join("");
 }
 
-function squared(text: string): string {
+// Maps every letter to its uppercase counterpart's enclosed-alphanumeric
+// glyph at `base` (these Unicode blocks only define capital forms).
+function uppercaseEnclosed(text: string, base: number): string {
 	return Array.from(text, (ch) => {
 		const code = ch.toUpperCase().codePointAt(0)!;
+		return code >= 65 && code <= 90 ? String.fromCodePoint(base + (code - 65)) : ch;
+	}).join("");
+}
+
+function squared(text: string): string {
+	return uppercaseEnclosed(text, 0x1f130);
+}
+
+function negativeSquared(text: string): string {
+	return uppercaseEnclosed(text, 0x1f170);
+}
+
+function regionalIndicators(text: string): string {
+	return uppercaseEnclosed(text, 0x1f1e6);
+}
+
+function negativeCircled(text: string): string {
+	return Array.from(text, (ch) => {
+		if (ch >= "0" && ch <= "9") {
+			return ch === "0"
+				? String.fromCodePoint(0x24ff)
+				: String.fromCodePoint(0x2775 + Number(ch));
+		}
+		const code = ch.toUpperCase().codePointAt(0)!;
 		return code >= 65 && code <= 90
-			? String.fromCodePoint(0x1f130 + (code - 65))
+			? String.fromCodePoint(0x1f150 + (code - 65))
+			: ch;
+	}).join("");
+}
+
+// Parenthesized Latin letters only exist in lowercase form, and
+// parenthesized digits only exist for 1-9.
+function parenthesized(text: string): string {
+	return Array.from(text, (ch) => {
+		if (ch >= "1" && ch <= "9") return String.fromCodePoint(0x2473 + Number(ch));
+		const code = ch.toLowerCase().codePointAt(0)!;
+		return code >= 97 && code <= 122
+			? String.fromCodePoint(0x249c + (code - 97))
 			: ch;
 	}).join("");
 }
@@ -400,11 +447,21 @@ export function transform(
 					o: 0x2134,
 				},
 			});
+		case "bold-script":
+			return codePointMap(text, {
+				upperBase: 0x1d4d0,
+				lowerBase: 0x1d4ea,
+			});
 		case "fraktur":
 			return codePointMap(text, {
 				upperBase: 0x1d504,
 				lowerBase: 0x1d51e,
 				holes: { C: 0x212d, H: 0x210c, I: 0x2111, R: 0x211c, Z: 0x2128 },
+			});
+		case "bold-fraktur":
+			return codePointMap(text, {
+				upperBase: 0x1d56c,
+				lowerBase: 0x1d586,
 			});
 		case "double-struck":
 			return codePointMap(text, {
@@ -433,6 +490,22 @@ export function transform(
 				lowerBase: 0x1d5ba,
 				digitBase: 0x1d7e2,
 			});
+		case "sans-serif-bold":
+			return codePointMap(text, {
+				upperBase: 0x1d5d4,
+				lowerBase: 0x1d5ee,
+				digitBase: 0x1d7ec,
+			});
+		case "sans-serif-italic":
+			return codePointMap(text, {
+				upperBase: 0x1d608,
+				lowerBase: 0x1d622,
+			});
+		case "sans-serif-bold-italic":
+			return codePointMap(text, {
+				upperBase: 0x1d63c,
+				lowerBase: 0x1d656,
+			});
 		case "small-caps":
 			return codePointMap(text, { holes: smallCapsHoles });
 		case "fullwidth":
@@ -448,8 +521,16 @@ export function transform(
 				lowerBase: 0x24d0,
 				holes: circledDigitHoles,
 			});
+		case "negative-circled":
+			return negativeCircled(text);
 		case "squared":
 			return squared(text);
+		case "negative-squared":
+			return negativeSquared(text);
+		case "parenthesized":
+			return parenthesized(text);
+		case "regional-indicators":
+			return regionalIndicators(text);
 		case "superscript":
 			return codePointMap(text, { holes: superscriptHoles });
 		case "subscript":
