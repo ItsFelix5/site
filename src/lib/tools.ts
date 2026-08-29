@@ -28,6 +28,10 @@ export const tools = [
 		name: "Recorder",
 	},
 	{
+		slug: "text-transformer",
+		name: "Text Transformer",
+	},
+	{
 		slug: "unicode",
 		name: "Unicode Analyser",
 	},
