@@ -7,10 +7,10 @@ export const styles: TransformStyle[] = [
 	{ id: "bold", name: "Bold" },
 	{ id: "italic", name: "Italic" },
 	{ id: "bold-italic", name: "Bold Italic" },
-	{ id: "script", name: "Script" },
-	{ id: "bold-script", name: "Bold Script" },
-	{ id: "fraktur", name: "Fraktur" },
-	{ id: "bold-fraktur", name: "Bold Fraktur" },
+	{ id: "script", name: "Script / Cursive" },
+	{ id: "bold-script", name: "Bold Script / Cursive" },
+	{ id: "fraktur", name: "Fraktur / Gothic" },
+	{ id: "bold-fraktur", name: "Bold Fraktur / Gothic" },
 	{ id: "double-struck", name: "Double-Struck" },
 	{ id: "monospace", name: "Monospace" },
 	{ id: "sans-serif", name: "Sans-Serif" },
@@ -27,14 +27,44 @@ export const styles: TransformStyle[] = [
 	{ id: "regional-indicators", name: "Regional Indicators" },
 	{ id: "superscript", name: "Superscript" },
 	{ id: "subscript", name: "Subscript" },
-	{ id: "strikethrough", name: "Strikethrough" },
-	{ id: "underline", name: "Underline" },
 	{ id: "upside-down", name: "Upside Down" },
 	{ id: "mocking", name: "Mocking SpongeBob" },
 	{ id: "leetspeak", name: "Leetspeak" },
 	{ id: "reverse", name: "Reverse" },
+	{ id: "spaced-out", name: "Spaced Out" },
+	{ id: "clapback", name: "Clapback 👏" },
+	{ id: "starry", name: "Starry ✨" },
+	{ id: "heartfelt", name: "Heartfelt ❤️" },
+	{ id: "table-flip", name: "Table Flip (╯°□°）╯" },
 	{ id: "zalgo", name: "Zalgo" },
 ];
+
+export interface DecorationStyle {
+	id: string;
+	name: string;
+}
+
+// Decorations layer combining marks on top of whichever style is selected
+// above, so e.g. Bold + Strikethrough or Fullwidth + Wavy both work.
+export const decorations: DecorationStyle[] = [
+	{ id: "strikethrough", name: "Strikethrough" },
+	{ id: "slashed", name: "Slashed" },
+	{ id: "underline", name: "Underline" },
+	{ id: "double-underline", name: "Double Underline" },
+	{ id: "wavy", name: "Wavy" },
+	{ id: "dotted", name: "Dotted" },
+];
+
+export type DecorationId = (typeof decorations)[number]["id"];
+
+const DECORATION_MARKS: Record<DecorationId, number> = {
+	strikethrough: 0x0336,
+	slashed: 0x0335,
+	underline: 0x0332,
+	"double-underline": 0x0333,
+	wavy: 0x0334,
+	dotted: 0x0307,
+};
 
 export type StyleId = (typeof styles)[number]["id"];
 
@@ -338,9 +368,39 @@ function zalgo(text: string, { intensity, up, mid, down }: ZalgoOptions): string
 	}).join("");
 }
 
-function withCombining(text: string, mark: number): string {
-	const combining = String.fromCodePoint(mark);
-	return Array.from(text, (ch) => (ch === "\n" ? ch : ch + combining)).join("");
+export function decorate(text: string, active: DecorationId[]): string {
+	if (!active.length) return text;
+	const marks = active.map((id) => String.fromCodePoint(DECORATION_MARKS[id])).join("");
+	return Array.from(text, (ch) =>
+		ch === "\n" || ch === "\r" ? ch : ch + marks,
+	).join("");
+}
+
+function wordsOf(text: string): string[] {
+	return text.trim().split(/\s+/).filter(Boolean);
+}
+
+function spacedOut(text: string): string {
+	return Array.from(text).join(" ");
+}
+
+function clapback(text: string): string {
+	const words = wordsOf(text);
+	return words.length ? words.map((w) => w.toUpperCase()).join(" 👏 ") : text;
+}
+
+function starry(text: string): string {
+	const words = wordsOf(text);
+	return words.length ? `✨ ${words.join(" ✨ ")} ✨` : text;
+}
+
+function heartfelt(text: string): string {
+	const words = wordsOf(text);
+	return words.length ? `❤️ ${words.join(" ❤️ ")} ❤️` : text;
+}
+
+function tableFlip(text: string): string {
+	return text ? `${text} (╯°□°）╯︵ ┻━┻` : text;
 }
 
 // Maps every letter to its uppercase counterpart's enclosed-alphanumeric
@@ -535,10 +595,6 @@ export function transform(
 			return codePointMap(text, { holes: superscriptHoles });
 		case "subscript":
 			return codePointMap(text, { holes: subscriptHoles });
-		case "strikethrough":
-			return withCombining(text, 0x0336);
-		case "underline":
-			return withCombining(text, 0x0332);
 		case "upside-down":
 			return upsideDown(text);
 		case "mocking":
@@ -547,6 +603,16 @@ export function transform(
 			return Array.from(text, (ch) => leetMap[ch] ?? ch).join("");
 		case "reverse":
 			return Array.from(text).reverse().join("");
+		case "spaced-out":
+			return spacedOut(text);
+		case "clapback":
+			return clapback(text);
+		case "starry":
+			return starry(text);
+		case "heartfelt":
+			return heartfelt(text);
+		case "table-flip":
+			return tableFlip(text);
 		case "zalgo":
 			return zalgo(text, zalgoOptions);
 		default:

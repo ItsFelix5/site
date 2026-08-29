@@ -1,5 +1,12 @@
 <script lang="ts">
-  import { styles, transform, type StyleId } from "../../lib/textTransformer";
+  import {
+    decorate,
+    decorations,
+    styles,
+    transform,
+    type DecorationId,
+    type StyleId,
+  } from "../../lib/textTransformer";
 
   let input = $state(
     "The quick brown fox jumps over the lazy dog. h̸̢̛̯́̕o̴̠͐w̷̱̌ ̶͙̌d̵͉̈i̶̜̽d̸͇̈ ̴͖̀ẃ̷͙e̶̮͐ ̸̗̒g̶͖̈é̶͓t̸̬̀ ̶͈̏h̸͙̒e̷̥̒r̵͔̈é̴̜",
@@ -9,15 +16,28 @@
   let zalgoUp = $state(true);
   let zalgoMid = $state(true);
   let zalgoDown = $state(true);
+  let activeDecorations = $state<Record<DecorationId, boolean>>(
+    Object.fromEntries(decorations.map((d) => [d.id, false])) as Record<
+      DecorationId,
+      boolean
+    >,
+  );
   let copyLabel = $state("Copy");
 
-  const output = $derived(
+  const styled = $derived(
     transform(styleId, input, {
       intensity: zalgoIntensity,
       up: zalgoUp,
       mid: zalgoMid,
       down: zalgoDown,
     }),
+  );
+
+  const output = $derived(
+    decorate(
+      styled,
+      decorations.map((d) => d.id).filter((id) => activeDecorations[id]),
+    ),
   );
 </script>
 
@@ -59,6 +79,15 @@
   </div>
 {/if}
 
+<div class="row decoration-controls">
+  {#each decorations as decoration (decoration.id)}
+    <label class="max-field">
+      <input type="checkbox" bind:checked={activeDecorations[decoration.id]} />
+      <span class="muted">{decoration.name}</span>
+    </label>
+  {/each}
+</div>
+
 <div class="field">
   <div class="field-head">
     <span class="field-label">Result</span>
@@ -79,6 +108,11 @@
 <style>
   .zalgo-controls {
     margin-top: -0.25rem;
+  }
+
+  .decoration-controls {
+    flex-wrap: wrap;
+    row-gap: 0.5rem;
   }
 
   .max-field {
