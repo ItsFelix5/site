@@ -24,6 +24,7 @@ export const styles: TransformStyle[] = [
 	{ id: "squared", name: "Squared" },
 	{ id: "negative-squared", name: "Negative Squared" },
 	{ id: "parenthesized", name: "Parenthesized" },
+	{ id: "regional-indicators", name: "Regional Indicators" },
 	{ id: "superscript", name: "Superscript" },
 	{ id: "upside-down", name: "Upside Down" },
 	{ id: "mocking", name: "Mocking SpongeBob" },
@@ -52,7 +53,22 @@ export const decorations: DecorationStyle[] = [
 	{ id: "dotted", name: "Dotted" },
 ];
 
-export type DecorationId = (typeof decorations)[number]["id"];
+// Enclosing marks draw a shape *around* whatever they're attached to. Unlike
+// the precomposed Circled/Squared styles above (Latin letters and digits
+// only), these are combining diacritics, so they work on any character —
+// including digits, punctuation, or an already-styled letter.
+export const enclosingMarks: DecorationStyle[] = [
+	{ id: "enclosing-circle", name: "Circle" },
+	{ id: "enclosing-square", name: "Square" },
+	{ id: "enclosing-diamond", name: "Diamond" },
+	{ id: "enclosing-keycap", name: "Keycap" },
+	{ id: "enclosing-screen", name: "Screen" },
+	{ id: "enclosing-triangle", name: "Triangle" },
+];
+
+export type DecorationId =
+	| (typeof decorations)[number]["id"]
+	| (typeof enclosingMarks)[number]["id"];
 
 const DECORATION_MARKS: Record<DecorationId, number> = {
 	strikethrough: 0x0336,
@@ -61,6 +77,12 @@ const DECORATION_MARKS: Record<DecorationId, number> = {
 	"double-underline": 0x0333,
 	wavy: 0x0334,
 	dotted: 0x0307,
+	"enclosing-circle": 0x20dd,
+	"enclosing-square": 0x20de,
+	"enclosing-diamond": 0x20df,
+	"enclosing-keycap": 0x20e3,
+	"enclosing-screen": 0x20e2,
+	"enclosing-triangle": 0x20e4,
 };
 
 // Splits on grapheme clusters rather than UTF-16 code units or raw code
@@ -399,6 +421,32 @@ function negativeSquared(text: string): string {
 	return uppercaseEnclosed(text, 0x1f170);
 }
 
+// Two adjacent Regional Indicator symbols render as a country flag emoji in
+// most fonts, so "US" would silently become 🇺🇸 instead of two letters. A
+// zero-width non-joiner between consecutive ones breaks that pairing
+// (flag formation requires the pair to be immediately adjacent) without
+// being visible itself.
+const ZWNJ = String.fromCodePoint(0x200c);
+
+function regionalIndicators(text: string): string {
+	const out: string[] = [];
+	let prevWasFlagLetter = false;
+
+	for (const g of graphemes(text)) {
+		const code = Array.from(g).length === 1 ? g.toUpperCase().codePointAt(0)! : -1;
+		if (code >= 65 && code <= 90) {
+			if (prevWasFlagLetter) out.push(ZWNJ);
+			out.push(String.fromCodePoint(0x1f1e6 + (code - 65)));
+			prevWasFlagLetter = true;
+		} else {
+			out.push(g);
+			prevWasFlagLetter = false;
+		}
+	}
+
+	return out.join("");
+}
+
 function negativeCircled(text: string): string {
 	return mapGraphemes(text, (ch) => {
 		if (ch >= "0" && ch <= "9") {
@@ -567,6 +615,8 @@ export function transform(
 			return negativeSquared(text);
 		case "parenthesized":
 			return parenthesized(text);
+		case "regional-indicators":
+			return regionalIndicators(text);
 		case "superscript":
 			return superscript(text);
 		case "upside-down":

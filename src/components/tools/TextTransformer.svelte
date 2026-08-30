@@ -2,11 +2,14 @@
   import {
     decorate,
     decorations,
+    enclosingMarks,
     styles,
     transform,
     type DecorationId,
     type StyleId,
   } from "../../lib/textTransformer";
+
+  const allDecorations = [...decorations, ...enclosingMarks];
 
   let input = $state(
     "The quick brown fox jumps over the lazy dog. h̸̢̛̯́̕o̴̠͐w̷̱̌ ̶͙̌d̵͉̈i̶̜̽d̸͇̈ ̴͖̀ẃ̷͙e̶̮͐ ̸̗̒g̶͖̈é̶͓t̸̬̀ ̶͈̏h̸͙̒e̷̥̒r̵͔̈é̴̜",
@@ -17,7 +20,7 @@
   let zalgoMid = $state(true);
   let zalgoDown = $state(true);
   let activeDecorations = $state<Record<DecorationId, boolean>>(
-    Object.fromEntries(decorations.map((d) => [d.id, false])) as Record<
+    Object.fromEntries(allDecorations.map((d) => [d.id, false])) as Record<
       DecorationId,
       boolean
     >,
@@ -36,7 +39,7 @@
   const output = $derived(
     decorate(
       styled,
-      decorations.map((d) => d.id).filter((id) => activeDecorations[id]),
+      allDecorations.map((d) => d.id).filter((id) => activeDecorations[id]),
     ),
   );
 </script>
@@ -85,13 +88,28 @@
   </div>
 {/if}
 
-<div class="row decoration-controls">
-  {#each decorations as decoration (decoration.id)}
-    <label class="max-field">
-      <input type="checkbox" bind:checked={activeDecorations[decoration.id]} />
-      <span class="muted">{decoration.name}</span>
-    </label>
-  {/each}
+<div class="field">
+  <span class="field-label">Decorations</span>
+  <div class="row decoration-controls">
+    {#each decorations as decoration (decoration.id)}
+      <label class="max-field">
+        <input type="checkbox" bind:checked={activeDecorations[decoration.id]} />
+        <span class="muted">{decoration.name}</span>
+      </label>
+    {/each}
+  </div>
+</div>
+
+<div class="field">
+  <span class="field-label">Enclosing marks</span>
+  <div class="row decoration-controls">
+    {#each enclosingMarks as mark (mark.id)}
+      <label class="max-field">
+        <input type="checkbox" bind:checked={activeDecorations[mark.id]} />
+        <span class="muted">{mark.name}</span>
+      </label>
+    {/each}
+  </div>
 </div>
 
 <div class="field">
