@@ -328,14 +328,16 @@ const leetMap: Record<string, string> = {
 // relative to the base character. Marks documented as spanning *two* base
 // characters (the "double" diacritics, and the Cyrillic millions sign) are
 // deliberately excluded — applied to a single character they render with
-// stray width/overhang instead of stacking cleanly.
+// stray width/overhang instead of stacking cleanly. The "combining latin
+// small letter" marks (U+0363-U+036F) are excluded for the same reason:
+// common fonts (notably on Firefox) don't ship proper zero-width metrics
+// for them and fall back to a spacing glyph, opening a visible gap.
 const ZALGO_UP = [
 	0x030d, 0x030e, 0x0304, 0x0305, 0x033f, 0x0311, 0x0306, 0x0310, 0x0352,
 	0x0357, 0x0351, 0x0307, 0x0308, 0x030a, 0x0342, 0x0343, 0x0344, 0x034a,
 	0x034b, 0x034c, 0x0303, 0x0302, 0x030c, 0x0350, 0x0300, 0x0301, 0x030b,
-	0x030f, 0x0312, 0x0313, 0x0314, 0x033d, 0x0309, 0x0363, 0x0364, 0x0365,
-	0x0366, 0x0367, 0x0368, 0x0369, 0x036a, 0x036b, 0x036c, 0x036d, 0x036e,
-	0x036f, 0x033e, 0x035b, 0x0346, 0x031a,
+	0x030f, 0x0312, 0x0313, 0x0314, 0x033d, 0x0309, 0x033e, 0x035b, 0x0346,
+	0x031a,
 ].map((code) => String.fromCodePoint(code));
 
 const ZALGO_DOWN = [

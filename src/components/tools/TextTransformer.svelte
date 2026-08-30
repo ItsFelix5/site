@@ -55,14 +55,17 @@
 
 <div class="field">
   <span class="field-label">Style</span>
-  <div class="style-grid" role="group" aria-label="Text style">
+  <div class="style-list" role="radiogroup" aria-label="Text style">
     {#each styles as style (style.id)}
-      <button
-        type="button"
-        class="style-btn"
-        class:active={styleId === style.id}
-        onclick={() => (styleId = style.id)}>{style.name}</button
-      >
+      <label class="max-field">
+        <input
+          type="radio"
+          name="style"
+          value={style.id}
+          bind:group={styleId}
+        />
+        <span class="muted">{style.name}</span>
+      </label>
     {/each}
   </div>
 </div>
@@ -155,20 +158,10 @@
     flex: 1;
   }
 
-  .style-grid {
+  .style-list {
     display: flex;
     flex-wrap: wrap;
-    gap: 0.4rem;
-  }
-
-  .style-btn {
-    padding: 0.35rem 0.7rem;
-    font-size: 0.8rem;
-  }
-
-  .style-btn.active {
-    background: var(--surface-2);
-    border-color: var(--accent-border);
-    color: var(--accent);
+    column-gap: 1.25rem;
+    row-gap: 0.5rem;
   }
 </style>
