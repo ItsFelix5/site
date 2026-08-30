@@ -1,38 +1,49 @@
+export type StyleGroup = "Fonts" | "Enclosed" | "Effects" | "Corrupted";
+
 export interface TransformStyle {
 	id: string;
 	name: string;
+	group: StyleGroup;
 }
 
 export const styles: TransformStyle[] = [
-	{ id: "bold", name: "Bold" },
-	{ id: "italic", name: "Italic" },
-	{ id: "bold-italic", name: "Bold Italic" },
-	{ id: "script", name: "Script / Cursive" },
-	{ id: "bold-script", name: "Bold Script / Cursive" },
-	{ id: "fraktur", name: "Fraktur / Gothic" },
-	{ id: "bold-fraktur", name: "Bold Fraktur / Gothic" },
-	{ id: "double-struck", name: "Double-Struck" },
-	{ id: "monospace", name: "Monospace" },
-	{ id: "sans-serif", name: "Sans-Serif" },
-	{ id: "sans-serif-bold", name: "Sans-Serif Bold" },
-	{ id: "sans-serif-italic", name: "Sans-Serif Italic" },
-	{ id: "sans-serif-bold-italic", name: "Sans-Serif Bold Italic" },
-	{ id: "small-caps", name: "Small Caps" },
-	{ id: "fullwidth", name: "Fullwidth" },
-	{ id: "circled", name: "Circled" },
-	{ id: "negative-circled", name: "Negative Circled" },
-	{ id: "squared", name: "Squared" },
-	{ id: "negative-squared", name: "Negative Squared" },
-	{ id: "parenthesized", name: "Parenthesized" },
-	{ id: "regional-indicators", name: "Regional Indicators" },
-	{ id: "superscript", name: "Superscript" },
-	{ id: "upside-down", name: "Upside Down" },
-	{ id: "mocking", name: "Mocking SpongeBob" },
-	{ id: "leetspeak", name: "Leetspeak" },
-	{ id: "reverse", name: "Reverse" },
-	{ id: "spaced-out", name: "Spaced Out" },
-	{ id: "clapback", name: "Clapback 👏" },
-	{ id: "zalgo", name: "Zalgo" },
+	{ id: "bold", name: "Bold", group: "Fonts" },
+	{ id: "italic", name: "Italic", group: "Fonts" },
+	{ id: "bold-italic", name: "Bold Italic", group: "Fonts" },
+	{ id: "script", name: "Script / Cursive", group: "Fonts" },
+	{ id: "bold-script", name: "Bold Script / Cursive", group: "Fonts" },
+	{ id: "fraktur", name: "Fraktur / Gothic", group: "Fonts" },
+	{ id: "bold-fraktur", name: "Bold Fraktur / Gothic", group: "Fonts" },
+	{ id: "double-struck", name: "Double-Struck", group: "Fonts" },
+	{ id: "monospace", name: "Monospace", group: "Fonts" },
+	{ id: "sans-serif", name: "Sans-Serif", group: "Fonts" },
+	{ id: "sans-serif-bold", name: "Sans-Serif Bold", group: "Fonts" },
+	{ id: "sans-serif-italic", name: "Sans-Serif Italic", group: "Fonts" },
+	{
+		id: "sans-serif-bold-italic",
+		name: "Sans-Serif Bold Italic",
+		group: "Fonts",
+	},
+	{ id: "small-caps", name: "Small Caps", group: "Fonts" },
+	{ id: "superscript", name: "Superscript", group: "Fonts" },
+	{ id: "fullwidth", name: "Fullwidth", group: "Fonts" },
+	{ id: "circled", name: "Circled", group: "Enclosed" },
+	{ id: "negative-circled", name: "Negative Circled", group: "Enclosed" },
+	{ id: "squared", name: "Squared", group: "Enclosed" },
+	{ id: "negative-squared", name: "Negative Squared", group: "Enclosed" },
+	{ id: "parenthesized", name: "Parenthesized", group: "Enclosed" },
+	{
+		id: "regional-indicators",
+		name: "Regional Indicators",
+		group: "Enclosed",
+	},
+	{ id: "upside-down", name: "Upside Down", group: "Effects" },
+	{ id: "mocking", name: "Mocking SpongeBob", group: "Effects" },
+	{ id: "leetspeak", name: "Leetspeak", group: "Effects" },
+	{ id: "reverse", name: "Reverse", group: "Effects" },
+	{ id: "spaced-out", name: "Spaced Out", group: "Effects" },
+	{ id: "clapback", name: "Clapback 👏", group: "Effects" },
+	{ id: "zalgo", name: "Zalgo", group: "Corrupted" },
 ];
 
 export type StyleId = (typeof styles)[number]["id"];
