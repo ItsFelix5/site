@@ -24,20 +24,17 @@ export const styles: TransformStyle[] = [
 	{ id: "squared", name: "Squared" },
 	{ id: "negative-squared", name: "Negative Squared" },
 	{ id: "parenthesized", name: "Parenthesized" },
-	{ id: "regional-indicators", name: "Regional Indicators" },
 	{ id: "superscript", name: "Superscript" },
-	{ id: "subscript", name: "Subscript" },
 	{ id: "upside-down", name: "Upside Down" },
 	{ id: "mocking", name: "Mocking SpongeBob" },
 	{ id: "leetspeak", name: "Leetspeak" },
 	{ id: "reverse", name: "Reverse" },
 	{ id: "spaced-out", name: "Spaced Out" },
 	{ id: "clapback", name: "Clapback 👏" },
-	{ id: "starry", name: "Starry ✨" },
-	{ id: "heartfelt", name: "Heartfelt ❤️" },
-	{ id: "table-flip", name: "Table Flip (╯°□°）╯" },
 	{ id: "zalgo", name: "Zalgo" },
 ];
+
+export type StyleId = (typeof styles)[number]["id"];
 
 export interface DecorationStyle {
 	id: string;
@@ -66,7 +63,25 @@ const DECORATION_MARKS: Record<DecorationId, number> = {
 	dotted: 0x0307,
 };
 
-export type StyleId = (typeof styles)[number]["id"];
+// Splits on grapheme clusters rather than UTF-16 code units or raw code
+// points, so an emoji sequence or a letter with its own combining marks
+// (e.g. pasted-in zalgo text) moves through every transform as one unit
+// instead of being torn apart.
+function graphemes(text: string): string[] {
+	return Array.from(
+		new Intl.Segmenter(undefined, { granularity: "grapheme" }).segment(text),
+		(s) => s.segment,
+	);
+}
+
+// Applies `fn` to every grapheme that is a single code point (a plain
+// letter/digit/punctuation mark) and leaves multi-code-point clusters
+// (emoji, accented letters, existing combining sequences) untouched.
+function mapGraphemes(text: string, fn: (single: string) => string): string {
+	return graphemes(text)
+		.map((g) => (Array.from(g).length === 1 ? fn(g) : g))
+		.join("");
+}
 
 interface CodePointMapOptions {
 	upperBase?: number;
@@ -80,7 +95,7 @@ function codePointMap(
 	text: string,
 	{ upperBase, lowerBase, digitBase, holes = {}, space }: CodePointMapOptions,
 ): string {
-	return Array.from(text, (ch) => {
+	return mapGraphemes(text, (ch) => {
 		if (holes[ch] !== undefined) return String.fromCodePoint(holes[ch]);
 		if (space !== undefined && ch === " ") return String.fromCodePoint(space);
 
@@ -93,7 +108,7 @@ function codePointMap(
 			return String.fromCodePoint(digitBase + (code - 48));
 
 		return ch;
-	}).join("");
+	});
 }
 
 const circledDigitHoles: Record<string, number> = { "0": 0x24ea };
@@ -126,7 +141,13 @@ const smallCapsHoles: Record<string, number> = {
 	z: 0x1d22,
 };
 
-const superscriptHoles: Record<string, number> = {
+// Every lowercase letter except "q" has a real Unicode superscript glyph;
+// no case-distinct uppercase forms exist for a good chunk of the alphabet
+// (C, F, Q, S, X, Y, Z), so rather than leaving those full-size and having
+// them stick out among the tiny ones, superscript folds case and always
+// uses the lowercase glyph. "q" has no superscript form in any case and is
+// left as-is — a single rare letter, and the only real gap left.
+const superscriptLetters: Record<string, number> = {
 	a: 0x1d43,
 	b: 0x1d47,
 	c: 0x1d9c,
@@ -152,25 +173,9 @@ const superscriptHoles: Record<string, number> = {
 	x: 0x02e3,
 	y: 0x02b8,
 	z: 0x1dbb,
-	A: 0x1d2c,
-	B: 0x1d2e,
-	D: 0x1d30,
-	E: 0x1d31,
-	G: 0x1d33,
-	H: 0x1d34,
-	I: 0x1d35,
-	J: 0x1d36,
-	K: 0x1d37,
-	L: 0x1d38,
-	M: 0x1d39,
-	N: 0x1d3a,
-	O: 0x1d3c,
-	P: 0x1d3e,
-	R: 0x1d3f,
-	T: 0x1d40,
-	U: 0x1d41,
-	V: 0x2c7d,
-	W: 0x1d42,
+};
+
+const superscriptDigits: Record<string, number> = {
 	"0": 0x2070,
 	"1": 0x00b9,
 	"2": 0x00b2,
@@ -183,35 +188,16 @@ const superscriptHoles: Record<string, number> = {
 	"9": 0x2079,
 };
 
-const subscriptHoles: Record<string, number> = {
-	a: 0x2090,
-	e: 0x2091,
-	h: 0x2095,
-	i: 0x1d62,
-	j: 0x2c7c,
-	k: 0x2096,
-	l: 0x2097,
-	m: 0x2098,
-	n: 0x2099,
-	o: 0x2092,
-	p: 0x209a,
-	r: 0x1d63,
-	s: 0x209b,
-	t: 0x209c,
-	u: 0x1d64,
-	v: 0x1d65,
-	x: 0x2093,
-	"0": 0x2080,
-	"1": 0x2081,
-	"2": 0x2082,
-	"3": 0x2083,
-	"4": 0x2084,
-	"5": 0x2085,
-	"6": 0x2086,
-	"7": 0x2087,
-	"8": 0x2088,
-	"9": 0x2089,
-};
+function superscript(text: string): string {
+	return mapGraphemes(text, (ch) => {
+		if (superscriptDigits[ch] !== undefined)
+			return String.fromCodePoint(superscriptDigits[ch]);
+		const lower = ch.toLowerCase();
+		return superscriptLetters[lower] !== undefined
+			? String.fromCodePoint(superscriptLetters[lower])
+			: ch;
+	});
+}
 
 const upsideDownMap: Record<string, string> = {
 	a: "ɐ",
@@ -317,7 +303,10 @@ const leetMap: Record<string, string> = {
 };
 
 // Combining marks used to build "zalgo" text, grouped by where they render
-// relative to the base character.
+// relative to the base character. Marks documented as spanning *two* base
+// characters (the "double" diacritics, and the Cyrillic millions sign) are
+// deliberately excluded — applied to a single character they render with
+// stray width/overhang instead of stacking cleanly.
 const ZALGO_UP = [
 	0x030d, 0x030e, 0x0304, 0x0305, 0x033f, 0x0311, 0x0306, 0x0310, 0x0352,
 	0x0357, 0x0351, 0x0307, 0x0308, 0x030a, 0x0342, 0x0343, 0x0344, 0x034a,
@@ -337,8 +326,7 @@ const ZALGO_DOWN = [
 
 const ZALGO_MID = [
 	0x0315, 0x031b, 0x0340, 0x0341, 0x0358, 0x0321, 0x0322, 0x0327, 0x0328,
-	0x0334, 0x0335, 0x0336, 0x035c, 0x035d, 0x035e, 0x035f, 0x0360, 0x0362,
-	0x0338, 0x0337, 0x0361, 0x0489,
+	0x0334, 0x0335, 0x0336, 0x0338, 0x0337,
 ].map((code) => String.fromCodePoint(code));
 
 export interface ZalgoOptions {
@@ -349,31 +337,36 @@ export interface ZalgoOptions {
 }
 
 function zalgo(text: string, { intensity, up, mid, down }: ZalgoOptions): string {
-	const maxMarks = 1 + Math.round((intensity / 100) * 8);
+	// Scale gently: most of the slider's range should still look like text,
+	// not noise. Only the very top of the range piles marks on thick.
+	const maxMarks =
+		intensity <= 0 ? 0 : Math.max(1, Math.round((intensity / 100) ** 1.5 * 6));
 	const pools = [up && ZALGO_UP, mid && ZALGO_MID, down && ZALGO_DOWN].filter(
 		(pool): pool is string[] => Array.isArray(pool),
 	);
-	if (!pools.length) return text;
+	if (!pools.length || !maxMarks) return text;
 
-	return Array.from(text, (ch) => {
-		if (ch === "\n" || ch === "\r") return ch;
-		let out = ch;
-		for (const pool of pools) {
-			const count = Math.floor(Math.random() * (maxMarks + 1));
-			for (let i = 0; i < count; i++) {
-				out += pool[Math.floor(Math.random() * pool.length)];
+	return graphemes(text)
+		.map((g) => {
+			if (g === "\n" || g === "\r") return g;
+			let out = g;
+			for (const pool of pools) {
+				const count = Math.floor(Math.random() * (maxMarks + 1));
+				for (let i = 0; i < count; i++) {
+					out += pool[Math.floor(Math.random() * pool.length)];
+				}
 			}
-		}
-		return out;
-	}).join("");
+			return out;
+		})
+		.join("");
 }
 
 export function decorate(text: string, active: DecorationId[]): string {
 	if (!active.length) return text;
 	const marks = active.map((id) => String.fromCodePoint(DECORATION_MARKS[id])).join("");
-	return Array.from(text, (ch) =>
-		ch === "\n" || ch === "\r" ? ch : ch + marks,
-	).join("");
+	return graphemes(text)
+		.map((g) => (g === "\n" || g === "\r" ? g : g + marks))
+		.join("");
 }
 
 function wordsOf(text: string): string[] {
@@ -381,7 +374,7 @@ function wordsOf(text: string): string[] {
 }
 
 function spacedOut(text: string): string {
-	return Array.from(text).join(" ");
+	return graphemes(text).join(" ");
 }
 
 function clapback(text: string): string {
@@ -389,27 +382,13 @@ function clapback(text: string): string {
 	return words.length ? words.map((w) => w.toUpperCase()).join(" 👏 ") : text;
 }
 
-function starry(text: string): string {
-	const words = wordsOf(text);
-	return words.length ? `✨ ${words.join(" ✨ ")} ✨` : text;
-}
-
-function heartfelt(text: string): string {
-	const words = wordsOf(text);
-	return words.length ? `❤️ ${words.join(" ❤️ ")} ❤️` : text;
-}
-
-function tableFlip(text: string): string {
-	return text ? `${text} (╯°□°）╯︵ ┻━┻` : text;
-}
-
 // Maps every letter to its uppercase counterpart's enclosed-alphanumeric
 // glyph at `base` (these Unicode blocks only define capital forms).
 function uppercaseEnclosed(text: string, base: number): string {
-	return Array.from(text, (ch) => {
+	return mapGraphemes(text, (ch) => {
 		const code = ch.toUpperCase().codePointAt(0)!;
 		return code >= 65 && code <= 90 ? String.fromCodePoint(base + (code - 65)) : ch;
-	}).join("");
+	});
 }
 
 function squared(text: string): string {
@@ -420,12 +399,8 @@ function negativeSquared(text: string): string {
 	return uppercaseEnclosed(text, 0x1f170);
 }
 
-function regionalIndicators(text: string): string {
-	return uppercaseEnclosed(text, 0x1f1e6);
-}
-
 function negativeCircled(text: string): string {
-	return Array.from(text, (ch) => {
+	return mapGraphemes(text, (ch) => {
 		if (ch >= "0" && ch <= "9") {
 			return ch === "0"
 				? String.fromCodePoint(0x24ff)
@@ -435,35 +410,38 @@ function negativeCircled(text: string): string {
 		return code >= 65 && code <= 90
 			? String.fromCodePoint(0x1f150 + (code - 65))
 			: ch;
-	}).join("");
+	});
 }
 
 // Parenthesized Latin letters only exist in lowercase form, and
 // parenthesized digits only exist for 1-9.
 function parenthesized(text: string): string {
-	return Array.from(text, (ch) => {
+	return mapGraphemes(text, (ch) => {
 		if (ch >= "1" && ch <= "9") return String.fromCodePoint(0x2473 + Number(ch));
 		const code = ch.toLowerCase().codePointAt(0)!;
 		return code >= 97 && code <= 122
 			? String.fromCodePoint(0x249c + (code - 97))
 			: ch;
-	}).join("");
+	});
 }
 
 function upsideDown(text: string): string {
-	return Array.from(text, (ch) => upsideDownMap[ch] ?? ch)
+	return graphemes(text)
+		.map((g) => upsideDownMap[g] ?? g)
 		.reverse()
 		.join("");
 }
 
 function mocking(text: string): string {
 	let letterIndex = 0;
-	return Array.from(text, (ch) => {
-		if (!/[a-z]/i.test(ch)) return ch;
-		const out = letterIndex % 2 === 0 ? ch.toLowerCase() : ch.toUpperCase();
-		letterIndex++;
-		return out;
-	}).join("");
+	return graphemes(text)
+		.map((g) => {
+			if (!/^[a-z]$/i.test(g)) return g;
+			const out = letterIndex % 2 === 0 ? g.toLowerCase() : g.toUpperCase();
+			letterIndex++;
+			return out;
+		})
+		.join("");
 }
 
 export function transform(
@@ -589,30 +567,20 @@ export function transform(
 			return negativeSquared(text);
 		case "parenthesized":
 			return parenthesized(text);
-		case "regional-indicators":
-			return regionalIndicators(text);
 		case "superscript":
-			return codePointMap(text, { holes: superscriptHoles });
-		case "subscript":
-			return codePointMap(text, { holes: subscriptHoles });
+			return superscript(text);
 		case "upside-down":
 			return upsideDown(text);
 		case "mocking":
 			return mocking(text);
 		case "leetspeak":
-			return Array.from(text, (ch) => leetMap[ch] ?? ch).join("");
+			return mapGraphemes(text, (ch) => leetMap[ch] ?? ch);
 		case "reverse":
-			return Array.from(text).reverse().join("");
+			return graphemes(text).reverse().join("");
 		case "spaced-out":
 			return spacedOut(text);
 		case "clapback":
 			return clapback(text);
-		case "starry":
-			return starry(text);
-		case "heartfelt":
-			return heartfelt(text);
-		case "table-flip":
-			return tableFlip(text);
 		case "zalgo":
 			return zalgo(text, zalgoOptions);
 		default:

@@ -12,7 +12,7 @@
     "The quick brown fox jumps over the lazy dog. h̸̢̛̯́̕o̴̠͐w̷̱̌ ̶͙̌d̵͉̈i̶̜̽d̸͇̈ ̴͖̀ẃ̷͙e̶̮͐ ̸̗̒g̶͖̈é̶͓t̸̬̀ ̶͈̏h̸͙̒e̷̥̒r̵͔̈é̴̜",
   );
   let styleId = $state<StyleId>("zalgo");
-  let zalgoIntensity = $state(40);
+  let zalgoIntensity = $state(30);
   let zalgoUp = $state(true);
   let zalgoMid = $state(true);
   let zalgoDown = $state(true);
@@ -50,12 +50,18 @@
   ></textarea>
 </div>
 
-<div class="row">
-  <select bind:value={styleId}>
+<div class="field">
+  <span class="field-label">Style</span>
+  <div class="style-grid" role="group" aria-label="Text style">
     {#each styles as style (style.id)}
-      <option value={style.id}>{style.name}</option>
+      <button
+        type="button"
+        class="style-btn"
+        class:active={styleId === style.id}
+        onclick={() => (styleId = style.id)}>{style.name}</button
+      >
     {/each}
-  </select>
+  </div>
 </div>
 
 {#if styleId === "zalgo"}
@@ -131,13 +137,20 @@
     flex: 1;
   }
 
-  select {
-    background: var(--surface);
-    color: var(--text);
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    padding: 0.45rem 0.6rem;
-    font-family: inherit;
-    font-size: 0.85rem;
+  .style-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+  }
+
+  .style-btn {
+    padding: 0.35rem 0.7rem;
+    font-size: 0.8rem;
+  }
+
+  .style-btn.active {
+    background: var(--surface-2);
+    border-color: var(--accent-border);
+    color: var(--accent);
   }
 </style>
