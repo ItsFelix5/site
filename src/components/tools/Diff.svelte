@@ -375,6 +375,7 @@ const overview = $derived.by((): OverviewMark[] => {
 });
 
 const languageCompartment = new Compartment();
+const wrapCompartment = new Compartment();
 let languageChoice = $state("auto");
 let loadedLanguageName: string | null = null;
 
@@ -395,6 +396,10 @@ $effect(() => {
 				: languageChoice;
 	if (name === loadedLanguageName) return;
 	loadedLanguageName = name;
+
+	const wrap = name ? [] : [EditorView.lineWrapping];
+	aView?.dispatch({ effects: wrapCompartment.reconfigure(wrap) });
+	bView?.dispatch({ effects: wrapCompartment.reconfigure(wrap) });
 
 	if (!name) {
 		aView?.dispatch({ effects: languageCompartment.reconfigure([]) });
@@ -432,6 +437,7 @@ function editor(node: HTMLDivElement, side: Side) {
 				]),
 				lineNumbers(),
 				languageCompartment.of([]),
+				wrapCompartment.of([]),
 				syntaxHighlighting(
 					HighlightStyle.define([
 						{
