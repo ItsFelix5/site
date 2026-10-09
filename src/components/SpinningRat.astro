@@ -5,11 +5,11 @@
 
 <script>
   import explosionUrl from "../assets/explosion.mp3";
-import squeakUrl from "../assets/squeak.mp3";
-import { faces, vertices as localVerts } from "../lib/rat.json";
+  import squeakUrl from "../assets/squeak.mp3";
+  import { faces, vertices as localVerts } from "../lib/rat.json";
 
   const CHARS =
-    " .'`^\",:;Il!i><~+_-?][}{1)(\\/tfjrxnuvczXYUJCLQ0OZmwqpdbkhao*#MW&8%B@$";
+    " abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789*#&%@$.'`^\",:;!><~+_-?][}{)(\\/|=";
 
   function buildCircleMasks(resX: number, resY: number) {
     const masks: [number, number][][] = [];

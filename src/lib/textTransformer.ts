@@ -190,20 +190,19 @@ export function transform(
 		case "Spaced Out": return graphemes(text).join(" ");
 		case "Clapback": return text.trim().split(/\s+/).filter(Boolean).map((w) => w.toUpperCase()).join(" 👏 ");
 		case "Zalgo": {
-			const max = zalgoOptions.intensity <= 0 ? 0 : Math.max(1, Math.round((zalgoOptions.intensity / 100) ** 1.5 * 6));
+			const max = (zalgoOptions.intensity / 100) ** 1.5 * 8;
 			const pools = [zalgoOptions.up && zalgoPools.up, zalgoOptions.mid && zalgoPools.mid, zalgoOptions.down && zalgoPools.down]
 				.filter((pool): pool is number[] => !!pool)
 				.flat();
 
-			if (!max || !pools.length) return text;
+			if (!pools.length) return text;
 
 			return graphemes(text).map((g) => {
 				if (g === "\n" || g === "\r") return g;
 				let result = g;
-				pools.forEach(() => {
-					for (let i = 0; i < Math.floor(Math.random() * (max + 1)); i++)
-						result += String.fromCodePoint(pools[Math.floor(Math.random() * pools.length)]);
-				});
+				const marks = Math.floor(Math.random() * (max + 1));
+				for (let i = 0; i < marks; i++)
+					result += String.fromCodePoint(pools[Math.floor(Math.random() * pools.length)]);
 				return result;
 			}).join("");
 		}
