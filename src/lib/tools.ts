@@ -1,7 +1,15 @@
 export const tools = [
 	{
+		slug: "background-remover",
+		name: "Background Remover",
+	},
+	{
 		slug: "base64",
 		name: "Base64",
+	},
+	{
+		slug: "colors",
+		name: "Colors",
 	},
 	{
 		slug: "diff",
@@ -12,12 +20,24 @@ export const tools = [
 		name: "DNS Lookup",
 	},
 	{
+		slug: "solver",
+		name: "Equation Solver",
+	},
+	{
+		slug: "media",
+		name: "Media Editor",
+	},
+	{
 		slug: "ocr",
 		name: "OCR",
 	},
 	{
 		slug: "password-generator",
 		name: "Password Generator",
+	},
+	{
+		slug: "qr-code",
+		name: "QR Code",
 	},
 	{
 		slug: "randomizer",

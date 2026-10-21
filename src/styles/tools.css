@@ -193,3 +193,32 @@ main .error {
 main .muted {
   color: var(--muted);
 }
+
+main .drop {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 7rem;
+  padding: 0.75rem;
+  box-sizing: border-box;
+  background: var(--surface);
+  border: 1px dashed var(--border);
+  border-radius: 8px;
+  cursor: pointer;
+  transition:
+    border-color 0.15s ease,
+    background 0.15s ease;
+}
+
+main .drop:hover {
+  border-color: var(--accent-border);
+}
+
+main .drop.drag {
+  border-color: var(--accent);
+  background: var(--surface-2);
+}
+
+main input[type="text"].big {
+  display: block;
+}

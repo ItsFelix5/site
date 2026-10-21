@@ -21,8 +21,12 @@
 		"@codemirror/language-data": "^6.5.2",
 		"@codemirror/state": "^6.7.1",
 		"@codemirror/view": "^6.43.8",
+		"@ffmpeg/ffmpeg": "^0.12.15",
+		"@ffmpeg/util": "^0.12.2",
+		"@imgly/background-removal": "^1.7.0",
 		"@lezer/highlight": "^1.2.3",
 		"astro": "^7.0.6",
+		"qrcode-generator": "^2.0.4",
 		"svelte": "^5.56.4",
 		"tesseract.js": "^7.0.0",
 		"typescript": "^6.0.3"

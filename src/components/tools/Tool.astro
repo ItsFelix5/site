@@ -1,5 +1,10 @@
 ---
 import type { ToolSlug } from "../../lib/tools";
+import BgRemover from "./BgRemover.svelte";
+import Colors from "./Colors.svelte";
+import Media from "./Media.svelte";
+import Qr from "./Qr.svelte";
+import Solver from "./Solver.svelte";
 import Base64 from "./Base64.svelte";
 import Diff from "./Diff.svelte";
 import DnsLookup from "./DnsLookup.svelte";
@@ -26,3 +31,8 @@ const { slug } = Astro.props;
 {slug === "dns-lookup" && <DnsLookup client:load />}
 {slug === "text-transformer" && <TextTransformer client:load />}
 {slug === "unicode" && <Unicode client:load />}
+{slug === "background-remover" && <BgRemover client:load />}
+{slug === "colors" && <Colors client:load />}
+{slug === "media" && <Media client:load />}
+{slug === "qr-code" && <Qr client:load />}
+{slug === "solver" && <Solver client:load />}
